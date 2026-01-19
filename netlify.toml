@@ -3,6 +3,10 @@
   publish = "web/dist"
   functions = "netlify/functions"
 
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["@libsql/client"]
+
 # Route API calls to the single serverless function wrapper.
 [[redirects]]
   from = "/api/*"
