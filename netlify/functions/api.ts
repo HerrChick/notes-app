@@ -1,4 +1,4 @@
-import { handleApiRequest } from '../../../api/src/router'
+import { handleApiRequest } from '../../api/src/router'
 
 function toHeaders(headers: Record<string, string | string[] | undefined>): Headers {
   const out = new Headers()
@@ -17,7 +17,7 @@ export async function handler(event: any) {
   // Netlify function URLs look like `/.netlify/functions/api/...`
   // We normalize them to our internal API shape: `/api/...`.
   const normalizedPath = String(event.path || '').replace(
-    /^\\/\\.netlify\\/functions\\/api/,
+    /^\/\.netlify\/functions\/api/,
     '/api',
   )
   baseUrl.pathname = normalizedPath
