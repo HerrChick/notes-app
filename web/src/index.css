@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+/* Tailwind v4 theme tokens (retrowave: dark + purple highlight). */
+@theme {
+  --color-bg: #070511;
+  --color-surface: #0f0a1f;
+  --color-surface-2: #151033;
+  --color-text: #e8e4ff;
+  --color-muted: #b6b0e6;
+  --color-border: #2a2154;
+
+  --color-primary-400: #c084fc;
+  --color-primary-500: #a855f7;
+  --color-primary-600: #9333ea;
+
+  /* Optional secondary accent for subtle highlights. */
+  --color-accent-500: #22d3ee;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-primary-500) 35%, transparent);
+}
