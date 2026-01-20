@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './useAuth'
+import { Spinner } from '../components/Spinner'
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const { loading, status, error } = useAuth()
@@ -9,7 +10,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted">
-        Loading…
+        <Spinner label="Loading" size="md" />
       </div>
     )
   }

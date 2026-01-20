@@ -3,11 +3,15 @@ import { Link, useParams } from 'react-router-dom'
 import { apiJson } from '../lib/apiClient'
 import { emitTodosChanged, onLocalOnlyEvent, setEditorActive } from '../lib/appEvents'
 import { MarkdownEditor } from '../components/MarkdownEditor'
+import { Spinner } from '../components/Spinner'
 import type { ReactCodeMirrorRef } from '@uiw/react-codemirror'
+import { useSettings } from '../settings/useSettings'
 
 export function TodoDetailRoute() {
   const { id } = useParams()
   const todoId = id ? decodeURIComponent(id) : null
+
+  const { settings } = useSettings()
 
   const editorRef = useRef<ReactCodeMirrorRef | null>(null)
 
@@ -89,10 +93,10 @@ export function TodoDetailRoute() {
       } catch {
         setSaveStatus('error')
       }
-    }, 750)
+    }, settings.autosaveDebounceMs)
 
     return () => window.clearTimeout(t)
-  }, [todoId, loading, notes])
+  }, [todoId, loading, notes, settings.autosaveDebounceMs])
 
   async function toggleStatus() {
     if (!todo) return
@@ -129,7 +133,17 @@ export function TodoDetailRoute() {
           </div>
         </div>
         <div className="flex items-center gap-3 text-xs text-muted">
-          <span>{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'error' ? 'Save failed' : 'Saved'}</span>
+          <span className="flex min-w-[32px] items-center justify-end">
+            {loading ? (
+              <Spinner label="Loading task" size="sm" />
+            ) : saveStatus === 'saving' ? (
+              <Spinner label="Saving" size="sm" />
+            ) : saveStatus === 'error' ? (
+              'Save failed'
+            ) : (
+              'Saved'
+            )}
+          </span>
           <button
             type="button"
             onClick={() => void toggleStatus()}
@@ -143,7 +157,9 @@ export function TodoDetailRoute() {
       <div className="min-h-0 flex-1 p-4">
         <div className="h-full overflow-hidden rounded-xl border border-border bg-bg">
           {loading ? (
-            <div className="p-4 text-sm text-muted">Loading…</div>
+            <div className="flex h-full items-center justify-center p-4 text-sm text-muted">
+              <Spinner label="Loading task" size="md" />
+            </div>
           ) : error ? (
             <div className="p-4 text-sm text-muted">{error}</div>
           ) : (

@@ -472,7 +472,16 @@ export async function handleApiRequest(req: Request): Promise<Response> {
       if (!auth.ok) return auth.response
 
       await ensureMigrated()
-      const rows = await db().select({ name: topics.name }).from(topics).orderBy(desc(topics.createdAt)).limit(200)
+      // Only show topics that have at least one associated topic entry (note).
+      // We keep the original topics.createdAt ordering.
+      const rows = await db()
+        .select({ name: topics.name })
+        .from(topics)
+        .innerJoin(topicEntries, eq(topicEntries.topicName, topics.name))
+        .groupBy(topics.name)
+        .orderBy(desc(topics.createdAt))
+        .limit(200)
+
       return json({ topics: rows.map((r) => r.name) })
     }
 

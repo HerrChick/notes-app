@@ -7,18 +7,19 @@
     "build": "tsc -b",
     "lint": "eslint .",
     "db:generate": "drizzle-kit generate",
+    "db:migrate:remote": "tsx scripts/migrate-remote.ts",
     "db:push:turso": "drizzle-kit push --config drizzle.turso.config.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.17.0",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.1",
+    "dotenv": "^17.2.3",
     "zod": "^4.1.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@types/node": "^24.10.1",
-    "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.8",
     "eslint": "^9.39.1",
     "globals": "^16.5.0",

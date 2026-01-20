@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { apiJson } from '../lib/apiClient'
 import { emitTodosChanged, onAppEvent } from '../lib/appEvents'
+import { Spinner } from '../components/Spinner'
 
 export function TodosRoute() {
   const [filter, setFilter] = useState<'open' | 'done' | 'all'>('open')
@@ -83,17 +84,19 @@ export function TodosRoute() {
             </FilterButton>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => void refresh()}
-          className="rounded-lg border border-primary-600 bg-surface-2 px-3 py-1.5 text-xs font-medium text-primary-400 hover:bg-bg"
-        >
-          Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          {loading ? <Spinner label="Loading tasks" size="sm" className="text-muted" /> : null}
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            className="rounded-lg border border-primary-600 bg-surface-2 px-3 py-1.5 text-xs font-medium text-primary-400 hover:bg-bg"
+          >
+            Refresh
+          </button>
+        </div>
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        {loading ? <div className="p-2 text-sm text-muted">Loading…</div> : null}
         {error ? <div className="p-2 text-sm text-muted">{error}</div> : null}
 
         <div className="space-y-2">

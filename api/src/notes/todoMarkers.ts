@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 
 const MARKER_RE = /<!--todo:([a-f0-9-]{8,})-->/i
 const MARKER_RE_GLOBAL = /<!--todo:[a-f0-9-]{8,}-->/gi
+const MARKER_CAPTURE_RE_GLOBAL = /<!--todo:([a-f0-9-]{8,})-->/gi
 const TODO_LINE_RE = /^(\s*-\s*\[)( |x|X)(\])(\s+)(.+?)\s*$/
 
 function normalizeTitleKey(title: string): string {
@@ -11,6 +12,15 @@ function normalizeTitleKey(title: string): string {
 function extractMarkerId(line: string): string | null {
   const m = line.match(MARKER_RE)
   return m?.[1] ? m[1].toLowerCase() : null
+}
+
+function extractAllMarkerIds(line: string): string[] {
+  const ids: string[] = []
+  MARKER_CAPTURE_RE_GLOBAL.lastIndex = 0
+  for (let m = MARKER_CAPTURE_RE_GLOBAL.exec(line); m; m = MARKER_CAPTURE_RE_GLOBAL.exec(line)) {
+    if (m[1]) ids.push(m[1].toLowerCase())
+  }
+  return ids
 }
 
 function stripMarkers(text: string): string {
@@ -145,8 +155,20 @@ export function stabilizeTodoMarkers(opts: {
     if (!id) id = crypto.randomUUID()
     usedIds.add(id)
 
-    // Rebuild line with a single canonical marker.
-    nextLines[i] = `${match[1]}${match[2]}${match[3]}${match[4]}${title} <!--todo:${id}-->`
+    // Minimize rewrites: if the line already has exactly one correct marker at end,
+    // keep the original line text unchanged (reduces diff churn while editing).
+    const idLower = id.toLowerCase()
+    const markerIds = extractAllMarkerIds(line)
+    const hasOnlyCorrectMarker = markerIds.length === 1 && markerIds[0] === idLower
+    const hasCorrectMarkerAtEnd = new RegExp(`\\s*<!--todo:${idLower}-->\\s*$`, 'i').test(line)
+
+    if (hasOnlyCorrectMarker && hasCorrectMarkerAtEnd) {
+      continue
+    }
+
+    // Otherwise, rebuild with a single canonical marker at end.
+    const withoutMarkers = line.replace(MARKER_RE_GLOBAL, '').trimEnd()
+    nextLines[i] = `${withoutMarkers} <!--todo:${id}-->`
   }
 
   return { markdown: nextLines.join('\n') }

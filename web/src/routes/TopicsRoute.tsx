@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiJson } from '../lib/apiClient'
 import { onAppEvent } from '../lib/appEvents'
+import { Spinner } from '../components/Spinner'
 
 export function TopicsRoute() {
   const [loading, setLoading] = useState(true)
@@ -36,10 +37,10 @@ export function TopicsRoute() {
     <div className="flex h-full flex-col">
       <header className="flex items-center justify-between border-b border-border bg-surface px-5 py-3">
         <div className="text-sm font-semibold text-text">Topics</div>
+        {loading ? <Spinner label="Loading topics" size="sm" className="text-muted" /> : null}
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        {loading ? <div className="p-2 text-sm text-muted">Loading…</div> : null}
         {error ? <div className="p-2 text-sm text-muted">{error}</div> : null}
 
         <div className="space-y-2">

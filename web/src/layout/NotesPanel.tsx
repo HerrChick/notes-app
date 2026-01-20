@@ -68,7 +68,7 @@ function DailyList() {
   const selectedDate = match?.params.date
   const fallbackDates = useMemo(() => [todayISO()], [])
   const [dates, setDates] = useState<string[]>(fallbackDates)
-  const [loading, setLoading] = useState(true)
+  const [, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
@@ -95,9 +95,6 @@ function DailyList() {
 
   return (
     <div className="space-y-1">
-      {loading ? (
-        <div className="p-2 text-sm text-muted">Loading…</div>
-      ) : null}
       {dates.map((date) => (
         <NavLink
           key={date}
@@ -186,8 +183,6 @@ function TasksList() {
         </Link>
       </div>
 
-      {loading ? <div className="p-2 text-sm text-muted">Loading…</div> : null}
-
       {items.length === 0 && !loading ? (
         <div className="p-2 text-sm text-muted">No open tasks.</div>
       ) : null}
@@ -252,8 +247,6 @@ function TopicsList() {
           View all
         </Link>
       </div>
-
-      {loading ? <div className="p-2 text-sm text-muted">Loading…</div> : null}
 
       {items.length === 0 && !loading ? (
         <div className="p-2 text-sm text-muted">No topics yet.</div>

@@ -9,11 +9,29 @@ import {
   setEditorActive,
 } from '../lib/appEvents'
 import { MarkdownEditor } from '../components/MarkdownEditor'
+import { Spinner } from '../components/Spinner'
 import type { ReactCodeMirrorRef } from '@uiw/react-codemirror'
+import { useSettings } from '../settings/useSettings'
+
+const TODO_MARKER_RE = /<!--todo:[a-f0-9-]{8,}-->/i
+const TODO_LINE_RE = /^(\s*-\s*\[)( |x|X)(\])(\s+)(.+?)\s*$/
+
+function isActiveUnmarkedTodoLine(view: NonNullable<ReactCodeMirrorRef['view']>): boolean {
+  const head = view.state.selection.main.head
+  const line = view.state.doc.lineAt(head)
+  const text = line.text
+  if (TODO_MARKER_RE.test(text)) return false
+  const m = text.match(TODO_LINE_RE)
+  if (!m) return false
+  const rawText = m[5]
+  return !!rawText?.trim()
+}
 
 export function DailyRoute() {
   const { date } = useParams()
   const title = useMemo(() => (date ? `Daily · ${date}` : 'Daily'), [date])
+
+  const { settings } = useSettings()
 
   const editorRef = useRef<ReactCodeMirrorRef | null>(null)
 
@@ -22,6 +40,12 @@ export function DailyRoute() {
   const [markdown, setMarkdown] = useState<string>('')
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const lastSavedRef = useRef<string>('')
+  const markdownRef = useRef<string>('')
+  const saveSeqRef = useRef<number>(0)
+
+  useEffect(() => {
+    markdownRef.current = markdown
+  }, [markdown])
 
   useEffect(() => {
     setEditorActive(true)
@@ -76,21 +100,38 @@ export function DailyRoute() {
     if (loading) return
     if (markdown === lastSavedRef.current) return
 
-    setSaveStatus('saving')
     const t = window.setTimeout(async () => {
+      const view = editorRef.current?.view
+      // If we want todo IDs generated only when leaving the line, avoid autosaving
+      // while the cursor is still on a todo line that doesn't yet have an id.
+      // Otherwise the server will inject a marker on idle and we’d have to apply it.
+      if (settings.todoIdInsertionTiming === 'cursorLeavesLine' && view && isActiveUnmarkedTodoLine(view)) {
+        return
+      }
+
+      const saveSeq = ++saveSeqRef.current
+      const snapshot = markdownRef.current
       try {
+        setSaveStatus('saving')
         const res = await apiJson<{ ok: true; markdown: string }>(`/api/daily/${date}`, {
           method: 'PUT',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ markdown }),
+          body: JSON.stringify({ markdown: snapshot }),
         })
+
+        // If a newer save started after this one, ignore this response.
+        if (saveSeq !== saveSeqRef.current) return
+
+        // If the user has typed since this request was sent, don't overwrite the
+        // editor with server markdown (avoid "disappearing text" mid-type).
+        if (settings.applyServerRewritePolicy === 'applyOnlyIfUnchanged' && markdownRef.current !== snapshot) return
 
         const serverMarkdown = res.markdown
         lastSavedRef.current = serverMarkdown
 
         // If the server added todo-id markers, update the editor content while
         // keeping selection as stable as possible.
-        if (serverMarkdown !== markdown) {
+        if (serverMarkdown !== snapshot) {
           const view = editorRef.current?.view
           if (view) {
             const scrollTop = view.scrollDOM.scrollTop
@@ -125,12 +166,20 @@ export function DailyRoute() {
         emitTodosChangedThrottled(undefined)
         emitTopicsChangedThrottled(undefined)
       } catch {
+        if (saveSeq !== saveSeqRef.current) return
         setSaveStatus('error')
       }
-    }, 750)
+    }, settings.autosaveDebounceMs)
 
     return () => window.clearTimeout(t)
-  }, [date, loading, markdown])
+  }, [
+    date,
+    loading,
+    markdown,
+    settings.applyServerRewritePolicy,
+    settings.autosaveDebounceMs,
+    settings.todoIdInsertionTiming,
+  ])
 
   return (
     <div className="flex h-full flex-col">
@@ -139,15 +188,25 @@ export function DailyRoute() {
           <div className="truncate text-sm font-semibold text-text">{title}</div>
           <div className="text-xs text-muted">Autosave enabled</div>
         </div>
-        <div className="text-xs text-muted">
-          {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'error' ? 'Save failed' : 'Saved'}
+        <div className="flex min-w-[32px] items-center justify-end text-xs text-muted">
+          {loading ? (
+            <Spinner label="Loading note" size="sm" />
+          ) : saveStatus === 'saving' ? (
+            <Spinner label="Saving" size="sm" />
+          ) : saveStatus === 'error' ? (
+            'Save failed'
+          ) : (
+            'Saved'
+          )}
         </div>
       </header>
 
       <div className="min-h-0 flex-1 p-4">
         <div className="h-full overflow-hidden rounded-xl border border-border bg-bg">
           {loading ? (
-            <div className="p-4 text-sm text-muted">Loading…</div>
+            <div className="flex h-full items-center justify-center p-4 text-sm text-muted">
+              <Spinner label="Loading note" size="md" />
+            </div>
           ) : error ? (
             <div className="p-4 text-sm text-muted">{error}</div>
           ) : (
